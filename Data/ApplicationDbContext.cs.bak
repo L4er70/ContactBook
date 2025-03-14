@@ -1,0 +1,55 @@
+// Purpose: Contains the ApplicationDbContext class which is used to interact with the database.
+// The ApplicationDbContext class is derived from IdentityDbContext<ApplicationUser> and contains DbSet properties for the Contact, Email, Phone, and Address entities.
+// The OnModelCreating method is overridden to configure the relationships between the entities.
+// The ApplicationUser class is a custom user class derived from IdentityUser and contains additional properties for the user.
+// The SeedDataInitializer class contains a static method Initialize that seeds the database with roles and a default admin user.
+// The Initialize method is called in the Program class to seed the database when the application starts.
+
+using Microsoft.AspNetCore.Identity;
+using ContactsBook.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+namespace ContactsBook.Data
+{
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Contact> Contacts { get; set; }
+        public DbSet<Email> Emails { get; set; }
+        public DbSet<Phone> Phones { get; set; }
+        public DbSet<Address> Addresses { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Configure relationships
+            modelBuilder.Entity<Email>()
+                .HasOne(e => e.Contact)
+                .WithMany(c => c.Emails)
+                .HasForeignKey(e => e.ContactId);
+
+            modelBuilder.Entity<Phone>()
+                .HasOne(p => p.Contact)
+                .WithMany(c => c.Phones)
+                .HasForeignKey(p => p.ContactId);
+
+            modelBuilder.Entity<Address>()
+                .HasOne(a => a.Contact)
+                .WithMany(c => c.Addresses)
+                .HasForeignKey(a => a.ContactId);
+        }
+    }
+
+    // Custom user class for Identity
+    public class ApplicationUser : IdentityUser
+    {
+        // Add additional user properties here if needed
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+    }
+}
