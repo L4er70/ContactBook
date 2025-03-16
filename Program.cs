@@ -52,6 +52,10 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapAreaControllerRoute(
+    name: "account",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
+);
 
 // Create database and apply migrations if in development
 if (app.Environment.IsDevelopment())

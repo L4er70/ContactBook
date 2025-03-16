@@ -408,6 +408,61 @@ namespace ContactsBook.Controllers
 
             return File(Encoding.UTF8.GetBytes(builder.ToString()), "text/csv", "contacts.csv");
         }
+        public async Task<IActionResult> ExportToExcel(string searchString)
+{
+    var contacts = _context.Contacts
+        .Include(c => c.Emails)
+        .Include(c => c.Phones)
+        .Include(c => c.Addresses)
+        .AsQueryable();
+
+    if (!String.IsNullOrEmpty(searchString))
+    {
+        contacts = contacts.Where(c => 
+            c.FirstName.Contains(searchString) || 
+            c.LastName.Contains(searchString) ||
+            c.Emails.Any(e => e.EmailAddress.Contains(searchString)) ||
+            c.Phones.Any(p => p.PhoneNumber.Contains(searchString)) ||
+            c.Addresses.Any(a => a.StreetAddress.Contains(searchString) || 
+                                a.City.Contains(searchString) || 
+                                a.State.Contains(searchString))
+        );
+    }
+
+    var contactsList = await contacts.ToListAsync();
+
+    using (var workbook = new XLWorkbook())
+    {
+        var worksheet = workbook.Worksheets.Add("Contacts");
+        var currentRow = 1;
+        worksheet.Cell(currentRow, 1).Value = "Id";
+        worksheet.Cell(currentRow, 2).Value = "FirstName";
+        worksheet.Cell(currentRow, 3).Value = "LastName";
+        worksheet.Cell(currentRow, 4).Value = "Emails";
+        worksheet.Cell(currentRow, 5).Value = "Phones";
+        worksheet.Cell(currentRow, 6).Value = "Addresses";
+
+        foreach (var contact in contactsList)
+        {
+            currentRow++;
+            worksheet.Cell(currentRow, 1).Value = contact.Id;
+            worksheet.Cell(currentRow, 2).Value = contact.FirstName;
+            worksheet.Cell(currentRow, 3).Value = contact.LastName;
+            worksheet.Cell(currentRow, 4).Value = string.Join("|", contact.Emails.Select(e => e.EmailAddress));
+            worksheet.Cell(currentRow, 5).Value = string.Join("|", contact.Phones.Select(p => $"{p.PhoneType}: {p.PhoneNumber}"));
+            worksheet.Cell(currentRow, 6).Value = string.Join("|", contact.Addresses.Select(a => 
+                $"{a.AddressType}: {a.StreetAddress}, {a.City}, {a.State} {a.ZipCode}, {a.Country}".Trim(' ', ',')
+            ));
+        }
+
+        using (var stream = new MemoryStream())
+        {
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "contacts.xlsx");
+        }
+    }
+}
     }
 }
 
